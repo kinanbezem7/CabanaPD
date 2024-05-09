@@ -204,7 +204,9 @@ struct Prenotch
     Kokkos::Array<Kokkos::Array<double, 3>, num_notch> _p0;
     bool fixed_orientation;
 
+    Timer _timer;
     // Default constructor
+
     Prenotch() {}
 
     // Constructor if all pre-notches are oriented the same way (e.g.
@@ -238,6 +240,8 @@ struct Prenotch
     void create( ExecSpace, NeighborView& mu, Particles& particles,
                  Neighbors& neighbors )
     {
+        _timer.start();
+
         auto x = particles.sliceReferencePosition();
         Kokkos::RangePolicy<ExecSpace> policy( 0, particles.n_local );
 
@@ -274,6 +278,7 @@ struct Prenotch
             };
             Kokkos::parallel_for( "CabanaPD::Prenotch", policy, notch_functor );
         }
+        _timer.stop();
     }
 
     auto getV1( const int p )
@@ -291,6 +296,7 @@ struct Prenotch
         else
             return _v2[p];
     }
+    auto time() { return _timer.time(); };
 };
 
 } // namespace CabanaPD
