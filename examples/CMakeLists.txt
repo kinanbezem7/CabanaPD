@@ -10,4 +10,7 @@ target_link_libraries(CrackBranching LINK_PUBLIC CabanaPD)
 add_executable(RandomCracks random_cracks.cpp)
 target_link_libraries(RandomCracks LINK_PUBLIC CabanaPD)
 
-install(TARGETS ElasticWave KalthoffWinkler CrackBranching RandomCracks DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_executable(PlateWithHole plate_with_hole.cpp)
+target_link_libraries(PlateWithHole LINK_PUBLIC CabanaPD)
+
+install(TARGETS ElasticWave KalthoffWinkler CrackBranching PlateWithHole RandomCracks DESTINATION ${CMAKE_INSTALL_BINDIR})
