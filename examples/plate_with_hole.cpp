@@ -14,6 +14,7 @@
 #include "mpi.h"
 #include <Kokkos_Core.hpp>
 #include <CabanaPD.hpp>
+#include <cmath>
 
 void plateWithHoleExample(const std::string filename)
 {
@@ -100,11 +101,39 @@ void plateWithHoleExample(const std::string filename)
 
     // Run simulation
 // Add before creating solver
-    // Create empty prenotch (no notches needed for plate with hole)
-    Kokkos::Array<Kokkos::Array<double, 3>, 0> notch_positions;
-    Kokkos::Array<double, 3> v1 = {0.0, 0.0, 0.0};
-    Kokkos::Array<double, 3> v2 = {0.0, 0.0, 0.0};
-    CabanaPD::Prenotch<0> prenotch(v1, v2, notch_positions);
+    // Calculate the size of each cell in the x and y directions
+    double cell_size_x = (high_corner[0] - low_corner[0]) / num_cells[0];
+    double cell_size_y = (high_corner[1] - low_corner[1]) / num_cells[1];
+
+    // Use the smaller of the two dimensions for a conservative estimate
+    double particle_size = std::min(cell_size_x, cell_size_y);
+
+    // Calculate the circumference of the hole
+    double circumference = 2 * M_PI * hole_radius;
+
+    // Calculate the number of prenotches needed
+    int num_prenotch = static_cast<int>(std::ceil(circumference / particle_size));
+
+    // Create prenotch positions around the hole
+    Kokkos::Array<Kokkos::Array<double, 3>, num_prenotch> notch_positions;
+    Kokkos::Array<Kokkos::Array<double, 3>, num_prenotch> v1_array;
+    Kokkos::Array<Kokkos::Array<double, 3>, num_prenotch> v2_array;
+
+    for (int i = 0; i < num_prenotch; ++i) {
+        double angle = 2.0 * M_PI * i / num_prenotch;
+        double x = center_x + hole_radius * std::cos(angle);
+        double y = center_y + hole_radius * std::sin(angle);
+        notch_positions[i] = {x, y, 0.0};
+
+        // Tangent vector (v1) is perpendicular to the radius
+        v1_array[i] = {-std::sin(angle), std::cos(angle), 0.0};
+
+        // Normal vector (v2) points towards the center
+        v2_array[i] = {std::cos(angle), std::sin(angle), 0.0};
+    }
+
+    // Create the prenotch object
+    CabanaPD::Prenotch<num_prenotch> prenotch(v1_array, v2_array, notch_positions);
 
 // Then modify the solver creation
     auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
